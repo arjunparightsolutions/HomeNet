@@ -179,7 +179,7 @@
             const timeTaken = ((endTime - startTime) / 1000).toFixed(3);
             stats.innerText = `Found ${scoredArticles.length} results in ${timeTaken} seconds`;
 
-            if (scoredArticles.length === 0) {
+            if (scoredArticles.length === 0 && grid.innerHTML === '') {
                 grid.innerHTML = '<div style="color: #a1a1aa;">No results found. The AI might write about it soon!</div>';
                 return;
             }
