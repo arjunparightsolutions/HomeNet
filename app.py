@@ -6,10 +6,10 @@ import requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from pyngrok import ngrok
-from agent import start_agent_loop, get_agent_status
+from ai_engine import start_engine, generate_search_summary
 from nlp_utils import calculate_relevance
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='/')
 
 CONTENT_FILE = os.path.join(os.path.dirname(__file__), 'content', 'articles.json')
 WEBSITES_FILE = os.path.join(os.path.dirname(__file__), 'content', 'websites.json')
@@ -57,29 +57,12 @@ def save_website(website):
     with open(WEBSITES_FILE, 'w', encoding='utf-8') as f:
         json.dump(websites, f, indent=4, ensure_ascii=False)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/search')
-def search():
-    return render_template('search.html')
-
-@app.route('/storynet')
-def storynet():
-    return render_template('storynet.html')
-
-@app.route('/poemnet')
-def poemnet():
-    return render_template('poemnet.html')
-
-@app.route('/blognet')
-def blognet():
-    return render_template('blognet.html')
-
-@app.route('/novelnet')
-def novelnet():
-    return render_template('novelnet.html')
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return app.send_static_file(path)
+    return app.send_static_file('index.html')
 
 @app.route('/net/<path:net_name>')
 def dynamic_net(net_name):
@@ -129,14 +112,6 @@ def serve_hosted_file(net_name, filename):
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
     return "File not found", 404
-
-@app.route('/debug')
-def debug():
-    return render_template('debug.html')
-
-@app.route('/creatornet')
-def creatornet():
-    return render_template('creatornet.html')
 
 @app.route('/api/websites')
 def api_websites():
@@ -285,32 +260,23 @@ def api_get_analytics():
 def api_ai_summarize():
     data = request.json
     query = data.get('query', '')
-    context = data.get('context', '')
+    articles = data.get('articles', [])
     
-    prompt = f"""
-You are an AI Search Summarizer for HomeNet. 
-The user searched for: "{query}"
+    if not query or not articles:
+        return jsonify({"summary": ""})
 
-Here are the top search results:
-{context}
-
-Based ONLY on the provided search results, write a concise, 2-3 sentence summary answering the user's query. If the search results are unrelated to the query, try to infer a summary anyway or explain what the results are about.
-Keep it very brief, professional, and informative. Do not use markdown headers, just plain text.
-"""
-    try:
-        response = requests.post("http://localhost:11434/api/generate", json={
-            "model": "llama3.2:1b",
-            "prompt": prompt,
-            "stream": False
-        }, timeout=45)
+    context = ""
+    for idx, article in enumerate(articles):
+        title = article.get('title', '')
+        body = article.get('body', '')
+        # Remove simple HTML tags for context
+        body_text = body.replace('<p>', '').replace('</p>', '').replace('<h2>', '').replace('</h2>', '').replace('<br>', ' ')
+        body_snippet = body_text[:300]
+        context += f"Result {idx+1}:\nTitle: {title}\nSnippet: {body_snippet}...\n\n"
         
-        if response.status_code == 200:
-            result = response.json().get("response", "Could not generate summary.")
-            return jsonify({"summary": result})
-        else:
-            return jsonify({"summary": "AI Summarizer is currently offline."})
-    except Exception as e:
-        return jsonify({"summary": f"Error contacting AI: {str(e)}"})
+    summary = generate_search_summary(query, context)
+    return jsonify({"summary": summary})
+
 
 @app.route('/api/articles', methods=['GET'])
 def get_articles():
@@ -324,7 +290,7 @@ def add_article_api():
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
-    return jsonify(get_agent_status())
+    return jsonify({"status": "running", "engine": "ai_engine (Python)"})
 
 @app.route('/api/add', methods=['POST'])
 def add_article_manual():
@@ -375,7 +341,7 @@ if __name__ == '__main__':
         print(f"Failed to start ngrok: {e}")
 
     # Start background agent
-    agent_thread = threading.Thread(target=start_agent_loop, daemon=True)
+    agent_thread = threading.Thread(target=start_engine, daemon=True)
     agent_thread.start()
 
     # Start Flask
