@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.env
+
+# Protect API Keys and Local Data
+content/websites.json
+content/articles.json
+content/analytics.json
+content/hosted/
+static/uploads/
+
+# Generated apps folder
+generated_apps/

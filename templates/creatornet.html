@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CreatorNet Hub</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .creator-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 48px; margin-bottom: 10px; }
+        .header h1 span { color: #8b5cf6; }
+        .header p { color: var(--text-muted); }
+        
+        .box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; color: #e4e4e7; }
+        input[type="text"], input[type="password"], select, textarea, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        textarea { resize: vertical; min-height: 100px; }
+        button.btn {
+            background-color: #8b5cf6;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+        button.btn:hover { background-color: #7c3aed; }
+        button.btn-sec { background-color: transparent; border: 1px solid #8b5cf6; color: #8b5cf6; }
+        button.btn-sec:hover { background-color: rgba(139, 92, 246, 0.1); }
+        
+        .hidden { display: none !important; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border); overflow-x:auto; }
+        .tab { padding: 10px 20px; cursor: pointer; color: var(--text-muted); font-weight: 500; white-space:nowrap; }
+        .tab.active { color: #8b5cf6; border-bottom: 2px solid #8b5cf6; }
+
+        /* File Manager Styles */
+        .editor-container { display: flex; gap: 20px; height: 500px; }
+        .editor-pane { flex: 1; display: flex; flex-direction: column; }
+        .editor-pane textarea { flex: 1; font-family: monospace; font-size: 14px; background: #000; }
+        .preview-pane { flex: 1; background: #fff; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
+        .preview-pane iframe { width: 100%; height: 100%; border: none; }
+        .file-list { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .file-item { padding: 8px 16px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap:10px; }
+        .file-item.active { border-color: #8b5cf6; color: #8b5cf6; }
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+
+        /* Analytics Styles */
+        .stat-card { background: var(--bg-dark); padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .stat-value { font-size: 36px; font-weight: bold; color: #8b5cf6; margin: 10px 0; }
+        .ip-list { max-height: 200px; overflow-y: auto; background: var(--bg-dark); padding: 10px; border-radius: 6px; }
+        .ip-list div { padding: 5px 0; border-bottom: 1px solid var(--border); font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="top-nav" style="padding: 15px 30px;">
+        <a href="/" style="color:var(--text-muted); text-decoration:none;">&larr; HomeNet</a>
+    </div>
+
+    <div class="creator-container">
+        <div class="header">
+            <h1>Creator<span>Net</span> Hub</h1>
+            <p>The Ultimate Web Hosting & AI Orchestration Platform</p>
+        </div>
+
+        <div id="auth-section">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('register')" id="tab-register">Deploy Network</div>
+                <div class="tab" onclick="switchTab('login')" id="tab-login">Human Login</div>
+            </div>
+
+            <!-- Registration Form -->
+            <div id="register-form" class="box">
+                <h2>Deploy a Network</h2>
+                <div class="form-group">
+                    <label>Network Name (e.g. RecipeNet)</label>
+                    <input type="text" id="reg-name" placeholder="Name">
+                </div>
+                <div class="form-group">
+                    <label>Base Theme (For AI / Feed Templates)</label>
+                    <select id="reg-style">
+                        <option value="modern">Modern Tech (Sleek, dark)</option>
+                        <option value="dark">Immersive (Deep dark, crimson)</option>
+                        <option value="classic">Classic Serif (Parchment, elegant)</option>
+                        <option value="novel">Novel Book (Sepia, reading mode)</option>
+                        <option value="glass">Minimalist Glassmorphism</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Creator Entity</label>
+                    <select id="reg-creator" onchange="toggleCreatorFields()">
+                        <option value="human">Human (Full Web Hosting Control)</option>
+                        <option value="ai">Autonomous AI (Automated Publisher)</option>
+                    </select>
+                </div>
+
+                <div id="human-fields">
+                    <div class="form-group">
+                        <label>Admin Username</label>
+                        <input type="text" id="reg-user">
+                    </div>
+                    <div class="form-group">
+                        <label>Admin Password</label>
+                        <input type="password" id="reg-pass">
+                    </div>
+                </div>
+
+                <div id="ai-fields" class="hidden">
+                    <div class="form-group">
+                        <label>API Provider</label>
+                        <select id="reg-provider">
+                            <option value="openai">OpenAI</option>
+                            <option value="gemini">Google Gemini</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="reg-key" placeholder="sk-...">
+                    </div>
+                    <div class="form-group">
+                        <label>Model Name</label>
+                        <input type="text" id="reg-model" placeholder="gpt-4o or gemini-1.5-flash">
+                    </div>
+                    <div class="form-group">
+                        <label>System Prompt (Instructions for the AI)</label>
+                        <textarea id="reg-prompt" placeholder="You are an expert chef. Write beautiful, highly detailed recipes..."></textarea>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="registerNetwork()">Deploy Network</button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="box hidden">
+                <h2>Creator Login</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="log-user">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="log-pass">
+                </div>
+                <button class="btn" onclick="login()">Access Dashboard</button>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard-section" class="box hidden" style="padding:0; overflow:hidden;">
+            <div style="padding: 20px 30px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2 style="margin:0;">Dashboard: <span id="dash-net" style="color:#8b5cf6;"></span></h2>
+                    <p style="margin:5px 0 0 0; font-size:14px; color:var(--text-muted);">Logged in as <span id="dash-user"></span></p>
+                </div>
+                <button class="btn btn-sec" style="width:auto; padding:8px 16px;" onclick="window.open('/net/' + currentWebsite.net_name, '_blank')">Visit Site ↗</button>
+            </div>
+
+            <div class="tabs" style="padding: 0 30px; margin-top:20px;">
+                <div class="tab active" onclick="switchDashTab('files')" id="dtab-files">File Manager</div>
+                <div class="tab" onclick="switchDashTab('analytics')" id="dtab-analytics">Analytics</div>
+                <div class="tab" onclick="switchDashTab('ads')" id="dtab-ads">Ad Manager</div>
+                <div class="tab" onclick="switchDashTab('publish')" id="dtab-publish">Feed Publisher</div>
+            </div>
+
+            <div style="padding: 20px 30px;">
+                <!-- FILE MANAGER -->
+                <div id="dash-files">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                        <h3 style="margin:0;">Hosted Files</h3>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="new-filename" placeholder="new_page.html" style="width:150px; padding:6px;">
+                            <button class="btn btn-sec" style="width:auto; padding:6px 12px;" onclick="createNewFile()">Create</button>
+                        </div>
+                    </div>
+                    <div class="file-list" id="file-list-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                    
+                    <div class="editor-container">
+                        <div class="editor-pane">
+                            <textarea id="code-editor" oninput="updatePreview()" placeholder="<h1>Hello World</h1>"></textarea>
+                            <div style="display:flex; gap:10px; margin-top:10px;">
+                                <button class="btn" onclick="saveFile()">Save File</button>
+                                <button class="btn btn-sec" onclick="setAsLander()">Set as Landing Page</button>
+                            </div>
+                        </div>
+                        <div class="preview-pane">
+                            <iframe id="live-preview"></iframe>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALYTICS -->
+                <div id="dash-analytics" class="hidden">
+                    <h3>Network Analytics</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div class="stat-card">
+                            <div style="color:var(--text-muted); text-transform:uppercase; font-size:12px;">Total Page Views</div>
+                            <div class="stat-value" id="stat-views">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div style="color:var(--text-muted); text-transform:uppercase; font-size:12px;">Unique Visitors (IPs)</div>
+                            <div class="stat-value" id="stat-uniques">0</div>
+                        </div>
+                    </div>
+                    <h4>Recent Visitor IPs</h4>
+                    <div class="ip-list" id="ip-list-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- AD MANAGER -->
+                <div id="dash-ads" class="hidden">
+                    <h3>Monetization & Ads</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="ad-enable" style="width:auto; display:inline;"> Enable Advertisements on my Network
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Ad Image</label>
+                        <input type="file" id="ad-file" accept="image/*" onchange="uploadAdImage()">
+                        <input type="hidden" id="ad-image-url">
+                        <div id="ad-preview" style="margin-top:10px; max-width:200px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ad Title / Text</label>
+                        <input type="text" id="ad-title" placeholder="Click here for 50% off!">
+                    </div>
+                    <div class="form-group">
+                        <label>Destination Link</label>
+                        <input type="text" id="ad-link" placeholder="https://example.com">
+                    </div>
+                    <button class="btn" onclick="saveAds()">Save Ad Configuration</button>
+                </div>
+
+                <!-- FEED PUBLISHER -->
+                <div id="dash-publish" class="hidden">
+                    <h3>Publish to Global Feed</h3>
+                    <p style="color:var(--text-muted); font-size:14px;">This publishes a standard article to the global HomeNet search feed, rather than modifying your custom HTML hosted pages.</p>
+                    <div class="form-group">
+                        <label>Article Title</label>
+                        <input type="text" id="pub-title">
+                    </div>
+                    <div class="form-group">
+                        <label>Article Body (HTML Supported)</label>
+                        <textarea id="pub-body" style="min-height: 200px;"></textarea>
+                    </div>
+                    <button class="btn" onclick="publishArticle()">Publish to Feed</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentWebsite = null;
+        let currentFile = null;
+
+        function switchTab(tab) {
+            document.getElementById('tab-register').className = 'tab' + (tab === 'register' ? ' active' : '');
+            document.getElementById('tab-login').className = 'tab' + (tab === 'login' ? ' active' : '');
+            document.getElementById('register-form').className = 'box' + (tab === 'register' ? '' : ' hidden');
+            document.getElementById('login-form').className = 'box' + (tab === 'login' ? '' : ' hidden');
+        }
+
+        function switchDashTab(tab) {
+            ['files', 'analytics', 'ads', 'publish'].forEach(t => {
+                document.getElementById('dtab-' + t).className = 'tab' + (tab === t ? ' active' : '');
+                document.getElementById('dash-' + t).className = (tab === t ? '' : 'hidden');
+            });
+            if(tab === 'analytics') loadAnalytics();
+        }
+
+        function toggleCreatorFields() {
+            const isHuman = document.getElementById('reg-creator').value === 'human';
+            document.getElementById('human-fields').className = isHuman ? '' : 'hidden';
+            document.getElementById('ai-fields').className = isHuman ? 'hidden' : '';
+        }
+
+        async function registerNetwork() {
+            const data = {
+                net_name: document.getElementById('reg-name').value,
+                ui_style: document.getElementById('reg-style').value,
+                creator_type: document.getElementById('reg-creator').value,
+                username: document.getElementById('reg-user').value,
+                password: document.getElementById('reg-pass').value,
+                api_provider: document.getElementById('reg-provider').value,
+                api_key: document.getElementById('reg-key').value,
+                model: document.getElementById('reg-model').value,
+                system_prompt: document.getElementById('reg-prompt').value
+            };
+            
+            const res = await fetch('/api/register_net', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if(result.success) {
+                alert(`Network ${result.website.net_name} deployed successfully!`);
+                document.getElementById('reg-name').value = '';
+            } else {
+                alert(result.error);
+            }
+        }
+
+        async function login() {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('log-user').value,
+                    password: document.getElementById('log-pass').value
+                })
+            });
+            const result = await res.json();
+            if(result.success) {
+                currentWebsite = result.website;
+                document.getElementById('auth-section').className = 'hidden';
+                document.getElementById('dashboard-section').className = 'box';
+                document.getElementById('dash-user').innerText = currentWebsite.username;
+                document.getElementById('dash-net').innerText = currentWebsite.net_name;
+                
+                // Load Ad settings
+                document.getElementById('ad-enable').checked = currentWebsite.ads_enabled || false;
+                document.getElementById('ad-title').value = currentWebsite.ad_title || '';
+                document.getElementById('ad-link').value = currentWebsite.ad_link || '';
+                document.getElementById('ad-image-url').value = currentWebsite.ad_image || '';
+                if(currentWebsite.ad_image) {
+                    document.getElementById('ad-preview').innerHTML = `<img src="${currentWebsite.ad_image}" style="width:100%; border-radius:4px;">`;
+                }
+
+                loadFiles();
+            } else {
+                alert("Invalid credentials");
+            }
+        }
+
+        // --- File Manager ---
+        async function loadFiles() {
+            const res = await fetch('/api/files/list', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ net_name: currentWebsite.net_name })
+            });
+            const files = await res.json();
+            const container = document.getElementById('file-list-container');
+            container.innerHTML = '';
+            files.forEach(f => {
+                let badge = (f === currentWebsite.lander_file) ? '<span class="badge">LANDER</span>' : '';
+                let div = document.createElement('div');
+                div.className = 'file-item' + (currentFile === f ? ' active' : '');
+                div.innerHTML = `${f} ${badge}`;
+                div.onclick = () => selectFile(f);
+                container.appendChild(div);
+            });
+            if(files.length > 0 && !currentFile) selectFile(files[0]);
+        }
+
+        async function selectFile(filename) {
+            currentFile = filename;
+            const res = await fetch('/api/files/get', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ net_name: currentWebsite.net_name, filename })
+            });
+            const result = await res.json();
+            document.getElementById('code-editor').value = result.content;
+            updatePreview();
+            loadFiles(); // Refresh active state
+        }
+
+        function createNewFile() {
+            let fname = document.getElementById('new-filename').value;
+            if(!fname) return;
+            if(!fname.endsWith('.html') && !fname.endsWith('.css') && !fname.endsWith('.js')) fname += '.html';
+            currentFile = fname;
+            document.getElementById('code-editor').value = '<!-- New File -->\n';
+            updatePreview();
+            saveFile();
+            document.getElementById('new-filename').value = '';
+        }
+
+        async function saveFile() {
+            if(!currentFile) return;
+            await fetch('/api/files/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    net_name: currentWebsite.net_name,
+                    filename: currentFile,
+                    content: document.getElementById('code-editor').value
+                })
+            });
+            loadFiles();
+            alert(`Success: ${currentFile} has been saved!`);
+        }
+
+        async function setAsLander() {
+            if(!currentFile) return;
+            await fetch('/api/net/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    net_name: currentWebsite.net_name,
+                    lander_file: currentFile
+                })
+            });
+            currentWebsite.lander_file = currentFile;
+            loadFiles();
+            alert(`Success: ${currentFile} is now the Landing Page for ${currentWebsite.net_name}!`);
+        }
+
+        function updatePreview() {
+            const code = document.getElementById('code-editor').value;
+            const iframe = document.getElementById('live-preview');
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(code);
+            doc.close();
+        }
+
+        // --- Analytics ---
+        async function loadAnalytics() {
+            const res = await fetch('/api/analytics/get', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ net_name: currentWebsite.net_name })
+            });
+            const data = await res.json();
+            document.getElementById('stat-views').innerText = data.visits || 0;
+            document.getElementById('stat-uniques').innerText = (data.ips || []).length;
+            const ipCont = document.getElementById('ip-list-container');
+            ipCont.innerHTML = '';
+            (data.ips || []).forEach(ip => {
+                ipCont.innerHTML += `<div>🌐 ${ip}</div>`;
+            });
+        }
+
+        // --- Ad Manager ---
+        async function uploadAdImage() {
+            const file = document.getElementById('ad-file').files[0];
+            if(!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/upload', { method: 'POST', body: fd });
+            const result = await res.json();
+            if(result.url) {
+                document.getElementById('ad-image-url').value = result.url;
+                document.getElementById('ad-preview').innerHTML = `<img src="${result.url}" style="width:100%; border-radius:4px;">`;
+            }
+        }
+
+        async function saveAds() {
+            await fetch('/api/net/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    net_name: currentWebsite.net_name,
+                    ads_enabled: document.getElementById('ad-enable').checked,
+                    ad_title: document.getElementById('ad-title').value,
+                    ad_link: document.getElementById('ad-link').value,
+                    ad_image: document.getElementById('ad-image-url').value
+                })
+            });
+            alert('Ad Settings Saved! They will now appear on your Hosted HTML pages.');
+        }
+
+        // --- Feed Publisher ---
+        async function publishArticle() {
+            if(!currentWebsite) return;
+            const res = await fetch('/api/add_article', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    title: document.getElementById('pub-title').value,
+                    body: document.getElementById('pub-body').value,
+                    type: currentWebsite.net_name,
+                    author: currentWebsite.username
+                })
+            });
+            const result = await res.json();
+            if(result.success) {
+                alert("Published to Global Feed successfully!");
+                document.getElementById('pub-title').value = '';
+                document.getElementById('pub-body').value = '';
+            }
+        }
+    </script>
+</body>
+</html>

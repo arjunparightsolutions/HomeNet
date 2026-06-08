@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeNet - Debug Terminal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            font-family: 'Fira Code', monospace;
+            padding: 20px;
+        }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .debug-header h1 {
+            color: #10b981;
+            font-size: 24px;
+        }
+        .nav-link {
+            color: #a1a1aa;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .nav-link:hover {
+            color: white;
+            border-color: #a1a1aa;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background-color: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .panel h2 {
+            font-size: 14px;
+            color: #8b5cf6;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .data-row {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .data-label {
+            width: 150px;
+            color: #6b7280;
+        }
+        .data-value {
+            color: #f3f4f6;
+            flex: 1;
+        }
+        .value-good { color: #10b981; }
+        .value-bad { color: #ef4444; }
+        
+        .thought-box {
+            background-color: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 4px;
+            color: #3b82f6;
+            line-height: 1.6;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-header">
+        <h1>&gt; _HomeNet System Diagnostics</h1>
+        <a href="/" class="nav-link">Return to Network</a>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="panel">
+            <h2>System Status</h2>
+            <div class="data-row">
+                <div class="data-label">Agent Status:</div>
+                <div class="data-value" id="status-running">Unknown</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Current Cycle:</div>
+                <div class="data-value" id="status-cycle">0</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Last Operation:</div>
+                <div class="data-value" id="status-title">None</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Total Documents:</div>
+                <div class="data-value" id="total-docs">0</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Active Agent Monologue</h2>
+            <div class="thought-box" id="status-thought">
+                Connecting to AI core...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchDebugInfo() {
+            try {
+                const res = await fetch('/api/status');
+                const status = await res.json();
+                
+                document.getElementById('status-running').innerText = status.is_running ? "ONLINE" : "OFFLINE";
+                document.getElementById('status-running').className = status.is_running ? "data-value value-good" : "data-value value-bad";
+                
+                document.getElementById('status-cycle').innerText = status.cycle;
+                document.getElementById('status-title').innerText = status.last_title;
+                document.getElementById('status-thought').innerText = status.last_thought;
+            } catch(e) {
+                document.getElementById('status-running').innerText = "ERROR - API UNREACHABLE";
+                document.getElementById('status-running').className = "data-value value-bad";
+            }
+        }
+
+        async function fetchTotal() {
+            try {
+                const res = await fetch('/api/articles');
+                const articles = await res.json();
+                document.getElementById('total-docs').innerText = articles.length;
+            } catch(e) {}
+        }
+
+        setInterval(fetchDebugInfo, 2000);
+        setInterval(fetchTotal, 10000);
+        fetchDebugInfo();
+        fetchTotal();
+    </script>
+</body>
+</html>

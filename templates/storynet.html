@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryNet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #d4d4d4;
+            font-family: 'Crimson Pro', serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.8;
+        }
+        .nav {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1f1f1f;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            color: #ff3b3b;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .back-link {
+            text-decoration: none;
+            color: #888;
+            font-size: 16px;
+            font-family: sans-serif;
+        }
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .reader-view { display: none; }
+        .list-view { display: block; }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-family: sans-serif;
+            border: 1px solid #333;
+            background-color: #111;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .search-input:focus { outline: none; border-color: #ff3b3b; }
+        .card {
+            padding: 25px;
+            background-color: #111;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .card:hover { transform: translateX(10px); border-left-color: #ff3b3b; }
+        .card h3 { margin: 0 0 10px 0; font-size: 26px; color: #fff; }
+        .card p { margin: 0; color: #888; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* Reader */
+        .title { font-size: 48px; margin-bottom: 10px; color: #fff; line-height: 1.1; }
+        .meta { color: #ff3b3b; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; margin-bottom: 50px; font-family: sans-serif;}
+        .content { font-size: 22px; }
+        .content p { margin-bottom: 25px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/storynet" class="logo">StoryNet</a>
+        <a href="/search" class="back-link">&larr; Global Network</a>
+    </div>
+
+    <div class="container" id="list-view">
+        <input type="text" id="search" class="search-input" placeholder="Search the archives..." oninput="renderList()">
+        <div id="grid"></div>
+    </div>
+
+    <div class="container reader-view" id="reader-view">
+        <h1 class="title" id="r-title"></h1>
+        <div class="meta" id="r-meta"></div>
+        <div class="content" id="r-content"></div>
+    </div>
+
+    <script>
+        let articlesData = [];
+        const urlParams = new URLSearchParams(window.location.search);
+        const articleId = urlParams.get('id');
+
+        async function init() {
+            const res = await fetch('/api/articles');
+            const data = await res.json();
+            // Filter only stories
+            articlesData = data.filter(a => (a.type || '').toLowerCase() === 'story');
+            
+            if (articleId) {
+                const article = articlesData.find(a => a.id === articleId);
+                if (article) {
+                    showReader(article);
+                    return;
+                }
+            }
+            renderList();
+        }
+
+        function renderList() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            const filtered = articlesData.filter(a => {
+                if(!q) return true;
+                return (a.title||'').toLowerCase().includes(q) || (a.body||'').toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p style="color:#888;">No stories found in the archives.</p>';
+            }
+
+            filtered.forEach(a => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.onclick = () => window.location.href = `/storynet?id=${a.id}`;
+                div.innerHTML = `<h3>${a.title}</h3><p>${a.body.replace(/<[^>]*>?/gm, '')}</p>`;
+                grid.appendChild(div);
+            });
+        }
+
+        function showReader(article) {
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('reader-view').style.display = 'block';
+            
+            document.getElementById('r-title').innerText = article.title;
+            const date = new Date(article.timestamp).toLocaleDateString();
+            document.getElementById('r-meta').innerText = `Author: ${article.author || 'AI'} | ${date} | Views: ${article.views || 0}`;
+            document.getElementById('r-content').innerHTML = article.body;
+
+            fetch('/api/visit/' + article.id, { method: 'POST' });
+        }
+
+        init();
+    </script>
+</body>
+</html>

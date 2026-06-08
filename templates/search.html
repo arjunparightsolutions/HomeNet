@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - HomeNet</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="search-header-bar">
+        <h1 class="logo small-logo" onclick="window.location.href='/'">Home<span>Net</span></h1>
+    </div>
+
+    <div class="app-container">
+        <main class="main-content" id="main-content">
+            <div class="top-nav" style="margin-bottom: 30px;">
+                <a href="/" style="color:var(--text-muted); text-decoration:none; font-weight:500;">&larr; Back to HomeNet</a>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search the autonomous internet..." onkeypress="handleKeyPress(event)">
+                <button onclick="performSearch()">Search</button>
+            </div>
+
+            <div id="search-stats" class="search-stats"></div>
+
+            <div id="ai-overview-container" style="display: none;">
+                <div class="ai-overview">
+                    <div class="ai-glow"></div>
+                    <div class="ai-overview-header">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        AI Overview
+                    </div>
+                    <div id="ai-overview-text" class="ai-overview-content">
+                        ✨ Synthesizing information from the network...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid" id="card-grid">
+                <!-- Cards will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let initialQuery = urlParams.get('q') || '';
+        let searchQuery = initialQuery.toLowerCase().trim();
+        let articlesData = [];
+        let websitesData = [];
+
+        document.getElementById('search-input').value = initialQuery;
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') performSearch();
+        }
+
+        function performSearch() {
+            const val = document.getElementById('search-input').value;
+            window.location.href = `/search?q=${encodeURIComponent(val)}`;
+        }
+
+        async function fetchArticles() {
+            const startTime = performance.now();
+            try {
+                const res = await fetch('/api/articles');
+                articlesData = await res.json();
+                
+                const wRes = await fetch('/api/websites');
+                websitesData = await wRes.json();
+
+                renderCards(startTime);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Fuzzy matching logic
+        function calculateRelevance(article, queryTokens) {
+            let score = 0;
+            const title = (article.title || '').toLowerCase();
+            const body = (article.body || '').toLowerCase();
+            const type = (article.type || '').toLowerCase();
+            
+            // Exact full query match
+            if (title.includes(searchQuery)) score += 50;
+            if (body.includes(searchQuery)) score += 20;
+            if (type.includes(searchQuery)) score += 30;
+
+            // Token based fuzzy matching
+            queryTokens.forEach(token => {
+                if (token.length > 2) { 
+                    if (title.includes(token)) score += 10;
+                    if (body.includes(token)) score += 3;
+                    if (type.includes(token)) score += 15;
+                }
+            });
+
+            return score;
+        }
+
+        function getTypeBadge(type) {
+            const t = (type || 'blog').toLowerCase();
+            if (t === 'poem') return `<span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.2);">PoemNet</span>`;
+            if (t === 'story') return `<span class="badge" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">StoryNet</span>`;
+            if (t === 'novel') return `<span class="badge" style="background-color: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.2);">NovelNet</span>`;
+            if (t === 'blog' || t === 'article') return `<span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.2);">BlogNet</span>`;
+            
+            // Custom dynamic net badge
+            return `<span class="badge" style="background-color: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.2);">${type}</span>`;
+        }
+
+        function getAppRoute(type, id) {
+            const t = (type || 'blog').toLowerCase();
+            if (t === 'article' || t === 'blog') return `/blognet?id=${id}`;
+            if (['poem', 'story', 'novel'].includes(t)) {
+                return `/${t}net?id=${id}`;
+            }
+            return `/net/${type}?id=${id}`;
+        }
+
+        function renderCards(startTime) {
+            const grid = document.getElementById('card-grid');
+            const stats = document.getElementById('search-stats');
+            grid.innerHTML = '';
+            
+            // Check for official site queries
+            const q = searchQuery.replace(/\s+/g, '');
+            if (q.includes('blog') || q.includes('blof')) {
+                grid.innerHTML += createOfficialCard('BlogNet', 'The sleek, modern tech-focused interface for deep-dive articles.', '/blognet', 'rgba(59, 130, 246, 0.1)', '#3b82f6');
+            }
+            if (q.includes('poem') || q.includes('poen')) {
+                grid.innerHTML += createOfficialCard('PoemNet', 'Classic parchment paper aesthetics for beautiful poetry.', '/poemnet', 'rgba(168, 85, 247, 0.1)', '#a855f7');
+            }
+            if (q.includes('story') || q.includes('stry')) {
+                grid.innerHTML += createOfficialCard('StoryNet', 'Cinematic dark-mode design for immersive storytelling.', '/storynet', 'rgba(239, 68, 68, 0.1)', '#ef4444');
+            }
+            if (q.includes('novel') || q.includes('nvel')) {
+                grid.innerHTML += createOfficialCard('NovelNet', 'Bright, sepia-toned layout optimized for reading chapters.', '/novelnet', 'rgba(234, 179, 8, 0.1)', '#eab308');
+            }
+
+            // Check for custom dynamic networks
+            websitesData.forEach(w => {
+                const wName = (w.net_name || '').toLowerCase().replace(/\s+/g, '');
+                if (wName && q.includes(wName)) {
+                    grid.innerHTML += createOfficialCard(w.net_name, `A custom network hosted by ${w.creator_type === 'ai' ? 'Autonomous AI' : w.username}`, `/net/${w.net_name}`, 'rgba(139, 92, 246, 0.1)', '#8b5cf6');
+                }
+            });
+
+            let scoredArticles = [];
+            const queryTokens = searchQuery.split(/\s+/);
+
+            articlesData.forEach(article => {
+                let score = 1; 
+                if (searchQuery !== '') {
+                    score = calculateRelevance(article, queryTokens);
+                }
+
+                if (searchQuery === '' || score > 0) {
+                    scoredArticles.push({
+                        article: article,
+                        score: score,
+                        views: article.views || 0,
+                        dateMs: new Date(article.timestamp).getTime()
+                    });
+                }
+            });
+
+            // Sort by Relevance -> Views -> Date
+            scoredArticles.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if (b.views !== a.views) return b.views - a.views;
+                return b.dateMs - a.dateMs;
+            });
+
+            const endTime = performance.now();
+            const timeTaken = ((endTime - startTime) / 1000).toFixed(3);
+            stats.innerText = `Found ${scoredArticles.length} results in ${timeTaken} seconds`;
+
+            if (scoredArticles.length === 0) {
+                grid.innerHTML = '<div style="color: #a1a1aa;">No results found. The AI might write about it soon!</div>';
+                return;
+            }
+            
+            // Trigger AI Summary if we have results
+            if (searchQuery !== '') {
+                triggerAISummary(scoredArticles.slice(0, 3));
+            }
+
+            scoredArticles.forEach((item, index) => {
+                const article = item.article;
+                const date = new Date(article.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                let previewText = article.body || '';
+                previewText = previewText.replace(/<[^>]*>?/gm, '').substring(0, 180) + '...';
+                
+                const views = article.views || 0;
+                const routeUrl = getAppRoute(article.type, article.id);
+
+                const card = document.createElement('div');
+                card.className = 'card animate-up';
+                card.style.animationDelay = `${(index % 10) * 0.05}s`;
+                card.onclick = () => window.location.href = routeUrl;
+
+                card.innerHTML = `
+                    <h3>${article.title || 'Untitled'}</h3>
+                    <div class="card-meta">
+                        ${getTypeBadge(article.type)}
+                        <span class="badge badge-views">${views} views</span>
+                        <span class="date">${date}</span>
+                    </div>
+                    <p class="preview">${previewText}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function createOfficialCard(name, desc, url, bgColor, textColor) {
+            return `
+                <div class="card animate-up" style="border-left: 4px solid ${textColor}; background-color: #1a1a1f;" onclick="window.location.href='${url}'">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: ${textColor}; margin-bottom: 5px;">Official App</div>
+                            <h3 style="margin-bottom: 10px;">${name}</h3>
+                            <p class="preview">${desc}</p>
+                        </div>
+                        <div style="padding: 10px; background-color: ${bgColor}; border-radius: 50%; color: ${textColor};">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function triggerAISummary(topResults) {
+            document.getElementById('ai-overview-container').style.display = 'block';
+            const aiTextElement = document.getElementById('ai-overview-text');
+            aiTextElement.innerHTML = '✨ Synthesizing information from the network...';
+
+            let contextText = '';
+            topResults.forEach(item => {
+                const bodyText = (item.article.body || '').replace(/<[^>]*>?/gm, '');
+                contextText += `Title: ${item.article.title}\nContent: ${bodyText.substring(0, 500)}\n\n`;
+            });
+
+            try {
+                const res = await fetch('/api/ai_summarize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: searchQuery,
+                        context: contextText
+                    })
+                });
+                const result = await res.json();
+                
+                // Typewriter effect
+                aiTextElement.innerHTML = '';
+                const summary = result.summary || 'Could not generate summary.';
+                let i = 0;
+                const typingInterval = setInterval(() => {
+                    aiTextElement.innerHTML += summary.charAt(i);
+                    i++;
+                    if (i >= summary.length) clearInterval(typingInterval);
+                }, 20); // Fast typing speed
+                
+            } catch (e) {
+                aiTextElement.innerHTML = 'AI Summarizer is currently offline.';
+            }
+        }
+
+        fetchArticles();
+    </script>
+</body>
+</html>

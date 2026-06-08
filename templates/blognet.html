@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlogNet</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .nav {
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-dark);
+        }
+        .logo { font-size: 24px; font-weight: 700; color: #fff; text-decoration: none; }
+        .logo span { color: var(--accent); }
+        .back-link { text-decoration: none; color: var(--text-muted); font-size: 14px; }
+        .back-link:hover { color: #fff; }
+        .reader-view { display: none; }
+        .list-view { display: block; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/blognet" class="logo">Blog<span>Net</span></a>
+        <a href="/search" class="back-link">&larr; Global Search</a>
+    </div>
+
+    <div class="app-container list-view" id="list-view">
+        <div class="search-container" style="margin-bottom: 40px;">
+            <input type="text" id="search" class="search-input" placeholder="Search the blogosphere..." oninput="renderList()">
+        </div>
+        <div class="card-grid" id="grid"></div>
+    </div>
+
+    <div class="app-container reader-view" id="reader-view">
+        <div class="reader-content" style="padding: 0;">
+            <h1 id="r-title" class="reader-title"></h1>
+            <div id="r-meta" class="reader-meta"></div>
+            <div id="r-content" class="reader-body"></div>
+        </div>
+    </div>
+
+    <script>
+        let articlesData = [];
+        const urlParams = new URLSearchParams(window.location.search);
+        const articleId = urlParams.get('id');
+
+        async function init() {
+            const res = await fetch('/api/articles');
+            const data = await res.json();
+            // Filter only blogs and articles
+            articlesData = data.filter(a => {
+                const t = (a.type || '').toLowerCase();
+                return t === 'blog' || t === 'article' || t === '';
+            });
+            
+            if (articleId) {
+                const article = articlesData.find(a => a.id === articleId);
+                if (article) {
+                    showReader(article);
+                    return;
+                }
+            }
+            renderList();
+        }
+
+        function renderList() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            const filtered = articlesData.filter(a => {
+                if(!q) return true;
+                return (a.title||'').toLowerCase().includes(q) || (a.body||'').toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-muted);">No blogs found matching your search.</p>';
+            }
+
+            filtered.forEach(a => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.onclick = () => window.location.href = `/blognet?id=${a.id}`;
+                div.innerHTML = `
+                    <h3>${a.title}</h3>
+                    <div class="card-meta">
+                        <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.2);">BlogNet</span>
+                        <span class="badge badge-views">${a.views || 0} views</span>
+                    </div>
+                    <p class="preview" style="margin-top:10px;">${a.body.replace(/<[^>]*>?/gm, '')}</p>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function showReader(article) {
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('reader-view').style.display = 'block';
+            
+            document.getElementById('r-title').innerText = article.title;
+            const date = new Date(article.timestamp).toLocaleDateString();
+            document.getElementById('r-meta').innerHTML = `
+                <span>By <strong>${article.author || 'AI'}</strong></span>
+                <span>•</span>
+                <span>${date}</span>
+                <span>•</span>
+                <span style="color: #10b981;">${article.views || 0} views</span>
+            `;
+            document.getElementById('r-content').innerHTML = article.body;
+
+            fetch('/api/visit/' + article.id, { method: 'POST' });
+        }
+
+        init();
+    </script>
+</body>
+</html>
