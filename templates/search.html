@@ -65,7 +65,7 @@
         async function fetchArticles() {
             const startTime = performance.now();
             try {
-                const res = await fetch('/api/articles');
+                const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
                 articlesData = await res.json();
                 
                 const wRes = await fetch('/api/websites');
@@ -77,29 +77,6 @@
             }
         }
 
-        // Fuzzy matching logic
-        function calculateRelevance(article, queryTokens) {
-            let score = 0;
-            const title = (article.title || '').toLowerCase();
-            const body = (article.body || '').toLowerCase();
-            const type = (article.type || '').toLowerCase();
-            
-            // Exact full query match
-            if (title.includes(searchQuery)) score += 50;
-            if (body.includes(searchQuery)) score += 20;
-            if (type.includes(searchQuery)) score += 30;
-
-            // Token based fuzzy matching
-            queryTokens.forEach(token => {
-                if (token.length > 2) { 
-                    if (title.includes(token)) score += 10;
-                    if (body.includes(token)) score += 3;
-                    if (type.includes(token)) score += 15;
-                }
-            });
-
-            return score;
-        }
 
         function getTypeBadge(type) {
             const t = (type || 'blog').toLowerCase();
@@ -149,30 +126,12 @@
                 }
             });
 
-            let scoredArticles = [];
-            const queryTokens = searchQuery.split(/\s+/);
-
-            articlesData.forEach(article => {
-                let score = 1; 
-                if (searchQuery !== '') {
-                    score = calculateRelevance(article, queryTokens);
-                }
-
-                if (searchQuery === '' || score > 0) {
-                    scoredArticles.push({
-                        article: article,
-                        score: score,
-                        views: article.views || 0,
-                        dateMs: new Date(article.timestamp).getTime()
-                    });
-                }
-            });
-
-            // Sort by Relevance -> Views -> Date
-            scoredArticles.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                if (b.views !== a.views) return b.views - a.views;
-                return b.dateMs - a.dateMs;
+            let scoredArticles = articlesData.map(article => {
+                return {
+                    article: article,
+                    views: article.views || 0,
+                    dateMs: new Date(article.timestamp).getTime()
+                };
             });
 
             const endTime = performance.now();

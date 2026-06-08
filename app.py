@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from pyngrok import ngrok
 from agent import start_agent_loop, get_agent_status
+from nlp_utils import calculate_relevance
 
 app = Flask(__name__)
 
@@ -140,6 +141,29 @@ def creatornet():
 @app.route('/api/websites')
 def api_websites():
     return jsonify(load_websites())
+
+@app.route('/api/search', methods=['GET'])
+def api_search():
+    query = request.args.get('q', '').strip()
+    articles = load_articles()
+    
+    if not query:
+        # Sort by views, then newest
+        articles.sort(key=lambda x: (x.get('views', 0), x.get('timestamp', '')), reverse=True)
+        return jsonify(articles)
+        
+    scored_articles = []
+    for article in articles:
+        score = calculate_relevance(article, query)
+        if score > 0:
+            article['_score'] = score
+            scored_articles.append(article)
+            
+    # Sort by Relevance -> Views -> Date
+    scored_articles.sort(key=lambda x: (x.get('_score', 0), x.get('views', 0), x.get('timestamp', '')), reverse=True)
+    
+    # Return top 50 results to optimize bandwidth
+    return jsonify(scored_articles[:50])
 
 @app.route('/api/register_net', methods=['POST'])
 def api_register_net():
